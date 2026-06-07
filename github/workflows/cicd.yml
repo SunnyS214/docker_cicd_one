@@ -2,21 +2,55 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]  
+    branches: [main]
+
+# env setup
+env:
+  IMAGE_NAME: ${{secrets.DOCKER_USER_NAME}}/my-backend
 
 jobs:
   test:
     name: Test
-  runs-on: ubuntu@latest
+    runs-on: ubuntu-latest
 
-  steps:
-    -  name: code lao
-       uses: actions/checkout@v3
+    steps:
+      - name: code lao
+        uses: actions/checkout@v3
 
-    -  name: node setup
-       uses: actions/setup-node@v3
-       with:
-       node-version: "20"
-    
-    -  name: test karo
-       run: "node test.js"
+      - name: node setup
+        uses: actions/setup-node@v3
+        with:
+          node-version: "20"
+
+      - name: test karo
+        run: node test.js
+
+
+  docker:
+    name: docker image build and push
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: code lao
+        uses: actions/checkout@v3
+
+      - name: docker login
+        uses: docker/login-action@v2
+        with:
+          username: ${{secrets.DOCKER_USER_NAME}}
+          password: ${{secrets.DOCKER_PASSWORD}}
+
+      - name: docker image create push and deploy
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{env.IMAGE_NAME}}:latest
+            ${{env.IMAGE_NAME}}:${{github.sha}}
+
+      - name: verifying
+        run: |
+          echo "image push done"  
+          echo "image name : ${{env.IMAGE_NAME}}"  
